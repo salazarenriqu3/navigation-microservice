@@ -1,20 +1,11 @@
-FROM openjdk:17-jdk-slim
+FROM maven:3.8.6-openjdk-17-slim
 
 WORKDIR /app
 
-# Copy Maven wrapper files first
-COPY mvnw ./
-COPY .mvn .mvn
 COPY pom.xml ./
-
-# Make mvnw executable
-RUN chmod +x ./mvnw
-
-# Copy source code
 COPY src ./src
 
-# Build the application
-RUN ./mvnw clean package -DskipTests
+RUN mvn clean package -DskipTests
 
 EXPOSE 8080
 
