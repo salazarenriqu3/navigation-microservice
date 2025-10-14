@@ -1,0 +1,121 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MapAppProSpring</title>
+  <meta name="theme-color" content="#0b1220"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+  <link rel="stylesheet" href="/css/style.css" th:href="@{/css/style.css}"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+</head>
+<body>
+<nav class="navbar navbar-dark bg-dark app-header">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-semibold d-flex align-items-center gap-2" href="/"><i class="bi bi-geo-alt-fill text-primary"></i>MapAppProSpring</a>
+    <div class="d-flex align-items-center gap-3">
+      <div class="text-muted small d-none d-sm-block">OSM Routing · Driving · Walking · Cycling</div>
+      <div>
+        <form method="post" th:if="${session.user}" th:action="@{/logout}">
+          <span class="me-2 small" th:text="${session.user}">user</span>
+          <button class="btn btn-outline-light btn-sm" type="submit">Logout</button>
+        </form>
+        <a class="btn btn-outline-light btn-sm" th:if="${session.user} == null" href="/login" th:href="@{/login}">Login</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid mt-2">
+  <div class="row">
+    <div class="col-lg-3">
+      <div class="controls panel shadow-soft" id="controlPanel">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="mb-0 fw-semibold">Plan your trip</h6>
+          <button class="btn btn-outline-light btn-sm" id="togglePanel"><i class="bi bi-chevron-left"></i></button>
+        </div>
+        <div class="mb-3">
+          <p class="text-secondary small mb-0">Search places or click on the map.</p>
+        </div>
+        <div class="mb-3 position-relative">
+          <label class="form-label">Start</label>
+          <div class="input-with-icon"><i class="bi bi-flag"></i><input id="start" class="form-control" placeholder="Search or click on map"></div>
+          <div id="start-list" class="autocomplete-list" style="display:none"></div>
+        </div>
+        <div class="mb-3 position-relative">
+          <label class="form-label">Destination</label>
+          <div class="input-with-icon"><i class="bi bi-flag-fill"></i><input id="end" class="form-control" placeholder="Search or click on map"></div>
+          <div id="end-list" class="autocomplete-list" style="display:none"></div>
+        </div>
+        <div class="mb-3 d-flex gap-2">
+          <select id="profile" class="form-select">
+            <option value="driving">Driving</option>
+            <option value="walking">Walking</option>
+            <option value="cycling">Cycling</option>
+          </select>
+          <button id="routeBtn" class="btn btn-primary flex-grow-1"><i class="bi bi-arrow-right-circle me-1"></i>Get Route</button>
+        </div>
+        <div class="mb-3 d-flex gap-2 align-items-center">
+          <button id="startNavBtn" class="btn btn-success flex-grow-1"><i class="bi bi-play-circle me-1"></i>Start Navigation</button>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="voiceToggle">
+            <label class="form-check-label" for="voiceToggle">Voice</label>
+          </div>
+        </div>
+        <div class="mb-3 d-flex gap-2">
+          <button id="locateBtn" class="btn btn-outline-light flex-grow-1"><i class="bi bi-crosshair me-1"></i>Locate</button>
+          <button id="landmarkBtn" class="btn btn-success"><i class="bi bi-stars me-1"></i>Nearby</button>
+        </div>
+        <div class="mb-3 d-flex gap-2 align-items-center">
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="autoLandmarks">
+            <label class="form-check-label" for="autoLandmarks">Auto landmarks</label>
+          </div>
+          <select id="basemap" class="form-select">
+            <option value="voyager" selected>Carto Voyager</option>
+            <option value="positron">Carto Positron</option>
+            <option value="dark">Carto Dark Matter</option>
+            <option value="osm">OpenStreetMap</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Nearby categories</label>
+          <div class="d-flex flex-wrap gap-2" id="categoryChips">
+            <button class="btn btn-outline-light btn-sm" data-cat="cafe">Cafe</button>
+            <button class="btn btn-outline-light btn-sm" data-cat="restaurant">Restaurant</button>
+            <button class="btn btn-outline-light btn-sm" data-cat="park">Park</button>
+            <button class="btn btn-outline-light btn-sm" data-cat="atm">ATM</button>
+            <button class="btn btn-outline-light btn-sm" data-cat="pharmacy">Pharmacy</button>
+            <button class="btn btn-outline-light btn-sm" data-cat="hotel">Hotel</button>
+          </div>
+        </div>
+        <div id="info" class="mt-2 small info-text"></div>
+      </div>
+    </div>
+    <div class="col-lg-9">
+      <div id="map" class="map-surface"></div>
+      <div id="stepsPanel" class="panel shadow-soft" style="position:absolute; left:16px; bottom:16px; max-width:360px; display:none">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <strong>Route steps</strong>
+          <button class="btn btn-outline-light btn-sm" id="closeSteps"><i class="bi bi-x"></i></button>
+        </div>
+        <ol id="stepsList" class="small mb-0" style="max-height:220px; overflow:auto"></ol>
+      </div>
+      <div class="fab-stack">
+        <button class="fab" id="fabLocate" title="Locate"><i class="bi bi-crosshair"></i></button>
+        <button class="fab" id="fabStreet" title="Street View"><i class="bi bi-person-walking"></i></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@mapbox/polyline@1.1.1/src/polyline.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="/js/map.js" th:src="@{/js/map.js}"></script>
+</body>
+</html>
