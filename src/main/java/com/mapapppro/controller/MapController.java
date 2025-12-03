@@ -77,13 +77,13 @@ public class MapController {
                     .queryParam("format", "json")
                     .queryParam("q", q)
                     .queryParam("limit", 8)
-                    .queryParam("countrycodes", "ph")      
-                    .queryParam("addressdetails", "1")     
-                    .queryParam("dedupe", "1");            
+                    .queryParam("countrycodes", "ph")
+                    .queryParam("addressdetails", "1")
+                    .queryParam("dedupe", "1");
 
             if (viewbox != null && !viewbox.isEmpty()) {
                 builder.queryParam("viewbox", viewbox);
-                builder.queryParam("bounded", "0"); 
+                builder.queryParam("bounded", "0");
             }
 
             URI uri = builder.build().toUri();
@@ -110,16 +110,9 @@ public class MapController {
     ) {
         try {
             String[] defaults = new String[]{
-                    "tourism=museum",
-                    "amenity=hospital",
-                    "shop=mall",
-                    "amenity=school",
-                    "leisure=park",
-                    "amenity=restaurant",
-                    "amenity=cafe",
-                    "amenity=atm",
-                    "amenity=pharmacy",
-                    "tourism=hotel"
+                    "tourism=museum", "amenity=hospital", "shop=mall",
+                    "amenity=school", "leisure=park", "amenity=restaurant",
+                    "amenity=cafe", "amenity=atm", "amenity=pharmacy", "tourism=hotel"
             };
 
             String[] selected;
@@ -183,14 +176,20 @@ public class MapController {
             @RequestParam(required = false, defaultValue = "false") boolean steps) {
 
         try {
-            // FIX: Map friendly profile names to OSRM internal names
+            // FIX: THIS IS THE IMPORTANT PART
+            // We translate the UI names (walking/cycling) to OSRM API names (foot/bike)
             String osrmProfile = "driving";
-            if(profile.equalsIgnoreCase("walking")) osrmProfile = "foot";
-            else if(profile.equalsIgnoreCase("cycling")) osrmProfile = "bike";
-            else osrmProfile = "driving";
+            if (profile.equalsIgnoreCase("walking")) {
+                osrmProfile = "foot";
+            } else if (profile.equalsIgnoreCase("cycling")) {
+                osrmProfile = "bike";
+            } else {
+                osrmProfile = "driving";
+            }
 
             String coords = String.format("%f,%f;%f,%f", startLng, startLat, endLng, endLat);
-            // Use osrmProfile here instead of 'profile'
+            
+            // Use the translated 'osrmProfile' in the URL
             String base = String.format("http://router.project-osrm.org/route/v1/%s/%s", osrmProfile, coords);
 
             UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(base)
