@@ -24,17 +24,11 @@ public class MapController {
 
     private final RestTemplate rest = new RestTemplate();
 
-    // -----------------------------
-    // Main Page
-    // -----------------------------
     @GetMapping({"/", "/index"})
     public String index() {
         return "index";
     }
 
-    // -----------------------------
-    // Mock Auth + History (session)
-    // -----------------------------
     @GetMapping("/login")
     public String loginPage() { return "login"; }
 
@@ -75,9 +69,6 @@ public class MapController {
         return ResponseEntity.ok(history==null? new ArrayList<>(): history);
     }
 
-    // -----------------------------
-    // IMPROVED: Search using OpenStreetMap Nominatim
-    // -----------------------------
     @GetMapping("/search")
     @ResponseBody
     public ResponseEntity<String> search(@RequestParam String q, @RequestParam(required = false) String viewbox) {
@@ -86,14 +77,13 @@ public class MapController {
                     .queryParam("format", "json")
                     .queryParam("q", q)
                     .queryParam("limit", 8)
-                    .queryParam("countrycodes", "ph")      // FIX: Restrict to Philippines
-                    .queryParam("addressdetails", "1")     // FIX: Get better address details
-                    .queryParam("dedupe", "1");            // FIX: Remove duplicates
+                    .queryParam("countrycodes", "ph")      
+                    .queryParam("addressdetails", "1")     
+                    .queryParam("dedupe", "1");            
 
-            // FIX: Bias results to the user's current map view (if provided)
             if (viewbox != null && !viewbox.isEmpty()) {
                 builder.queryParam("viewbox", viewbox);
-                builder.queryParam("bounded", "0"); // 0 = Prefer viewbox, but allow outside. 1 = Strict.
+                builder.queryParam("bounded", "0"); 
             }
 
             URI uri = builder.build().toUri();
@@ -110,9 +100,6 @@ public class MapController {
         }
     }
 
-    // -----------------------------
-    // Landmarks Nearby (Museums, Hospitals, Parks, etc.)
-    // -----------------------------
     @GetMapping("/landmarks")
     @ResponseBody
     public ResponseEntity<String> landmarks(
@@ -185,9 +172,6 @@ public class MapController {
         }
     }
 
-    // -----------------------------
-    // Route Finder
-    // -----------------------------
     @GetMapping("/route")
     @ResponseBody
     public ResponseEntity<String> route(
@@ -199,8 +183,15 @@ public class MapController {
             @RequestParam(required = false, defaultValue = "false") boolean steps) {
 
         try {
+            // FIX: Map friendly profile names to OSRM internal names
+            String osrmProfile = "driving";
+            if(profile.equalsIgnoreCase("walking")) osrmProfile = "foot";
+            else if(profile.equalsIgnoreCase("cycling")) osrmProfile = "bike";
+            else osrmProfile = "driving";
+
             String coords = String.format("%f,%f;%f,%f", startLng, startLat, endLng, endLat);
-            String base = String.format("http://router.project-osrm.org/route/v1/%s/%s", profile, coords);
+            // Use osrmProfile here instead of 'profile'
+            String base = String.format("http://router.project-osrm.org/route/v1/%s/%s", osrmProfile, coords);
 
             UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(base)
                     .queryParam("overview", "full")

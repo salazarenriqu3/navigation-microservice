@@ -1,8 +1,9 @@
 // --- 1. INITIALIZATION ---
-// FIX: Switch to a 'Light' map theme (Carto Voyager) so it's not "just black"
+// FIX: Switched to 'Voyager' (Light/Day Mode) to fix the "Black Map" issue
 const map = L.map('map', { zoomControl: false }).setView([14.5995, 120.9842], 13);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19, attribution: '&copy; OpenStreetMap &copy; CARTO'
+    maxZoom: 19, 
+    attribution: '&copy; OpenStreetMap &copy; CARTO'
 }).addTo(map);
 
 // Layer Groups
@@ -19,6 +20,8 @@ const activeCategories = new Set();
 const els = {
     start: document.getElementById('start'),
     end: document.getElementById('end'),
+    profile: document.getElementById('profile'), // FIX: Added reference
+    routeBtn: document.getElementById('routeBtn'), // FIX: Added reference
     mainPanel: document.getElementById('mainPanel'),
     mobileToggle: document.getElementById('mobileToggle'),
     navTop: document.getElementById('navTopBar'),
@@ -70,9 +73,10 @@ function attachAutocomplete(inputId, listId) {
                     input.value = mainText;
                     list.style.display = 'none';
                     const lat = parseFloat(r.lat), lon = parseFloat(r.lon);
-                    // Set marker and zoom
                     setMarker(inputId === 'start' ? 'start' : 'end', {lat, lng:lon}, mainText);
                     map.setView([lat, lon], 16);
+                    // FIX: Auto-route if both points exist
+                    if(startMarker && endMarker) els.routeBtn.click();
                 };
                 list.appendChild(item);
             });
@@ -153,19 +157,26 @@ if(autoLandmarksToggle){
     }
 }
 
-// --- 4. MARKERS & ROUTING (FIXED DRAGGING) ---
+// --- 4. MARKERS & ROUTING ---
+
+// FIX: Auto-update route when Profile changes (Walking/Cycling/Driving)
+els.profile.addEventListener('change', () => {
+    if(startMarker && endMarker) {
+        els.routeBtn.click();
+    }
+});
+
 map.on('click', e => {
     if (isNavigating) return;
     if (!startMarker) setMarker('start', e.latlng);
     else if (!endMarker) setMarker('end', e.latlng);
 });
 
-// FIX: This function now creates DRAGGABLE markers
+// FIX: Updated to use L.marker with draggable: true
 function setMarker(type, latlng, text) {
     const isStart = type === 'start';
-    const color = isStart ? '#3b82f6' : '#ef4444'; // Blue or Red
+    const color = isStart ? '#3b82f6' : '#ef4444'; 
 
-    // Create a Custom Icon that looks like a dot but behaves like a marker
     const customIcon = L.divIcon({
         className: 'custom-marker-icon',
         html: `<div style="
@@ -183,15 +194,18 @@ function setMarker(type, latlng, text) {
 
     const marker = L.marker(latlng, { 
         icon: customIcon, 
-        draggable: true // ENABLE DRAGGING
+        draggable: true // FIX: Enable dragging
     });
     
-    // Handle Drag Events
+    // FIX: Update coordinates and re-route on drag end
     marker.on('dragend', function(e) {
         const newPos = marker.getLatLng();
         const coordString = `${newPos.lat.toFixed(4)}, ${newPos.lng.toFixed(4)}`;
         if (isStart) els.start.value = coordString;
         else els.end.value = coordString;
+        
+        // Auto-refresh route if the other marker exists
+        if(startMarker && endMarker) els.routeBtn.click();
     });
 
     if (isStart) {
@@ -203,6 +217,9 @@ function setMarker(type, latlng, text) {
         endMarker = marker.addTo(map);
         els.end.value = text || `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`;
     }
+    
+    // Auto-refresh if this completes the pair
+    if(startMarker && endMarker && !text) els.routeBtn.click();
 }
 
 document.getElementById('locateBtn').addEventListener('click', () => {
@@ -213,10 +230,10 @@ document.getElementById('locateBtn').addEventListener('click', () => {
     });
 });
 
-document.getElementById('routeBtn').addEventListener('click', async () => {
+els.routeBtn.addEventListener('click', async () => {
     if (!startMarker || !endMarker) return alert("Set Start and End points first.");
     const s = startMarker.getLatLng(), e = endMarker.getLatLng();
-    const mode = document.getElementById('profile').value;
+    const mode = els.profile.value;
 
     try {
         const res = await fetch(`/route?startLat=${s.lat}&startLng=${s.lng}&endLat=${e.lat}&endLng=${e.lng}&profile=${mode}&steps=true`)
