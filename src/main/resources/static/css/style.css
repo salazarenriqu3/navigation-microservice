@@ -1,90 +1,97 @@
 :root {
     --bg: #0f172a;
-    --panel-bg: rgba(15, 23, 42, 0.85);
+    --panel-bg: rgba(15, 23, 42, 0.90);
     --panel-border: rgba(255, 255, 255, 0.1);
     --primary: #3b82f6;
     --accent: #10b981;
-    --text: #f1f5f9;
-    --safe-area-bottom: env(safe-area-inset-bottom);
+    --text: #f8fafc;
+    --safe-area-bottom: env(safe-area-inset-bottom, 20px);
 }
 
 body { margin: 0; padding: 0; overflow: hidden; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); }
 #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
 
-/* --- Top Navigation Bar --- */
+/* Header */
 .app-header {
     position: absolute; top: 0; left: 0; width: 100%; z-index: 1001;
-    background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+    background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
     padding: 15px; pointer-events: none;
 }
 .app-header .content { pointer-events: auto; display: flex; justify-content: space-between; align-items: center; }
 
-/* --- Control Panel (Desktop: Floating Left) --- */
+/* Main Panel */
 .controls-container {
-    position: absolute; top: 80px; left: 20px; width: 380px; z-index: 1000;
+    position: absolute; top: 80px; left: 20px; width: 360px; z-index: 1000;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .panel {
     background: var(--panel-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--panel-border); border-radius: 16px; padding: 20px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3); color: var(--text);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4); color: var(--text);
     max-height: calc(100vh - 120px); overflow-y: auto;
+    scrollbar-width: none; /* Hide scrollbar */
 }
+.panel::-webkit-scrollbar { display: none; }
 
-/* --- Mobile: Bottom Sheet Design --- */
+/* Form Elements */
+.form-control, .form-select {
+    background: rgba(0,0,0,0.3) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    color: white !important;
+}
+.form-control:focus { box-shadow: 0 0 0 2px var(--primary); border-color: var(--primary) !important; }
+.input-group-text { border-color: rgba(255,255,255,0.1) !important; }
+
+/* Autocomplete Results */
+.autocomplete-list {
+    position: absolute; width: 100%; z-index: 2000;
+    background: #1e293b; border: 1px solid var(--panel-border);
+    border-radius: 0 0 10px 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    max-height: 200px; overflow-y: auto;
+}
+.autocomplete-item { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; font-size: 0.9rem; }
+.autocomplete-item:hover { background: rgba(255,255,255,0.1); }
+
+/* POI Icons */
+.poi-icon {
+    background: #0f172a; color: white; border: 2px solid var(--accent);
+    border-radius: 8px; padding: 2px 6px; font-size: 11px; font-weight: bold;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5); white-space: nowrap;
+}
+.poi-hospital { border-color: #ef4444; }
+.poi-park { border-color: #22c55e; }
+.poi-restaurant { border-color: #f59e0b; }
+
+/* Mobile Bottom Sheet */
 @media (max-width: 768px) {
     .controls-container {
-        top: auto; bottom: 0; left: 0; width: 100%;
-        border-radius: 20px 20px 0 0;
-        transform: translateY(0);
-        z-index: 2000;
+        top: auto; bottom: 0; left: 0; width: 100%; z-index: 2000; transform: translateY(0);
     }
     .panel {
-        border-radius: 20px 20px 0 0;
-        max-height: 80vh;
-        border-bottom: none;
+        border-radius: 24px 24px 0 0; border-bottom: none;
         padding-bottom: calc(20px + var(--safe-area-bottom));
+        max-height: 80vh;
     }
-    /* Handle bar for dragging/visual cue */
-    .panel::before {
-        content: ''; display: block; width: 40px; height: 5px;
-        background: rgba(255,255,255,0.2); border-radius: 3px;
-        margin: -10px auto 15px auto;
-    }
-    .controls-container.collapsed { transform: translateY(calc(100% - 70px)); }
+    .controls-container.collapsed { transform: translateY(calc(100% - 60px)); }
 }
 
-/* --- LIVE NAVIGATION MODE ELEMENTS --- */
-body.navigating .app-header, 
-body.navigating .controls-container, 
-body.navigating .fab-stack { display: none !important; }
+/* Navigation Mode */
+body.navigating .app-header, body.navigating .controls-container { display: none !important; }
 
-/* Top Direction Banner */
 #navTopBar {
     display: none; position: absolute; top: 20px; left: 5%; width: 90%; z-index: 3000;
     background: #1e293b; border-radius: 12px; padding: 15px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 2px solid var(--primary);
-    text-align: center; pointer-events: auto;
+    align-items: center; gap: 15px;
 }
-body.navigating #navTopBar { display: flex; align-items: center; gap: 15px; }
+body.navigating #navTopBar { display: flex; }
+.nav-distance { font-size: 2rem; font-weight: 800; color: var(--primary); white-space: nowrap; }
+.nav-instruction { font-size: 1.1rem; font-weight: 700; color: white; line-height: 1.2; }
 
-/* Bottom Status Bar */
 #navBottomBar {
     display: none; position: absolute; bottom: 0; left: 0; width: 100%; z-index: 3000;
     background: #1e293b; padding: 20px 20px calc(20px + var(--safe-area-bottom)) 20px;
-    border-top: 1px solid rgba(255,255,255,0.1);
-    justify-content: space-between; align-items: center;
+    border-top: 1px solid rgba(255,255,255,0.1); justify-content: space-between; align-items: center;
 }
 body.navigating #navBottomBar { display: flex; }
-
-.nav-instruction { font-size: 1.2rem; font-weight: 700; color: white; line-height: 1.2; }
-.nav-distance { font-size: 2rem; font-weight: 800; color: var(--primary); }
-.nav-meta { font-size: 0.9rem; color: #94a3b8; }
-.nav-meta span { color: white; font-weight: 600; font-size: 1.1rem; }
-
-/* Utility Classes */
-.btn-primary { background: var(--primary); border: none; padding: 12px; border-radius: 12px; width: 100%; font-weight: 600; }
-.btn-danger { background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 12px; }
-.form-control { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 10px; padding: 12px; }
-.autocomplete-list { background: #1e293b; position: absolute; width: 100%; z-index: 10; border-radius: 0 0 10px 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-.autocomplete-item { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; }
+.nav-meta { font-size: 0.8rem; color: #94a3b8; line-height: 1.2; }
