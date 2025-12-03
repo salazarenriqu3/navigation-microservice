@@ -1,6 +1,7 @@
 // --- 1. INITIALIZATION ---
+// FIX: Switch to a 'Light' map theme (Carto Voyager) so it's not "just black"
 const map = L.map('map', { zoomControl: false }).setView([14.5995, 120.9842], 13);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
     maxZoom: 19, attribution: '&copy; OpenStreetMap &copy; CARTO'
 }).addTo(map);
 
@@ -29,10 +30,12 @@ const els = {
     navRem: document.getElementById('navRem')
 };
 
-// --- 2. SEARCH & AUTOCOMPLETE (Restored) ---
+// --- 2. SEARCH & AUTOCOMPLETE ---
 async function searchNominatim(q) {
     try {
-        const resp = await fetch('/search?q=' + encodeURIComponent(q));
+        const b = map.getBounds();
+        const viewbox = [b.getWest(), b.getNorth(), b.getEast(), b.getSouth()].join(',');
+        const resp = await fetch(`/search?q=${encodeURIComponent(q)}&viewbox=${viewbox}`);
         return await resp.json();
     } catch(e) { return []; }
 }
@@ -50,23 +53,33 @@ function attachAutocomplete(inputId, listId) {
         t = setTimeout(async () => {
             const results = await searchNominatim(q);
             list.innerHTML = '';
+            
+            if (results.length === 0) { list.style.display = 'none'; return; }
+
             results.slice(0, 5).forEach(r => {
                 const item = document.createElement('div');
                 item.className = 'autocomplete-item';
-                item.textContent = r.display_name;
+                let mainText = r.name || r.display_name.split(',')[0];
+                let subText = r.address ? 
+                    [r.address.city || r.address.town || r.address.municipality, r.address.state || r.address.region].filter(Boolean).join(', ') : 
+                    r.display_name.substring(mainText.length).replace(/^, /, '');
+
+                item.innerHTML = `<strong>${mainText}</strong><br><small class="text-secondary">${subText}</small>`;
+                
                 item.onclick = () => {
-                    input.value = r.display_name;
+                    input.value = mainText;
                     list.style.display = 'none';
                     const lat = parseFloat(r.lat), lon = parseFloat(r.lon);
-                    setMarker(inputId === 'start' ? 'start' : 'end', {lat, lng:lon}, r.display_name);
-                    map.setView([lat, lon], 14);
+                    // Set marker and zoom
+                    setMarker(inputId === 'start' ? 'start' : 'end', {lat, lng:lon}, mainText);
+                    map.setView([lat, lon], 16);
                 };
                 list.appendChild(item);
             });
-            list.style.display = results.length ? 'block' : 'none';
+            list.style.display = 'block';
         }, 300);
     });
-    // Hide list on outside click
+    
     document.addEventListener('click', (e) => {
         if(!input.contains(e.target) && !list.contains(e.target)) list.style.display='none';
     });
@@ -74,7 +87,7 @@ function attachAutocomplete(inputId, listId) {
 attachAutocomplete('start', 'start-list');
 attachAutocomplete('end', 'end-list');
 
-// --- 3. LANDMARKS & POI (Restored) ---
+// --- 3. LANDMARKS & POI ---
 function iconForCategory(cat) {
     return L.divIcon({ 
         className: 'poi-icon poi-' + cat, 
@@ -106,13 +119,12 @@ document.getElementById('landmarkBtn').addEventListener('click', async () => {
     alert(count + ' places found nearby.');
 });
 
-// Category Chips Logic
 document.querySelectorAll('#categoryChips button').forEach(btn => {
     btn.addEventListener('click', () => {
         const cat = btn.getAttribute('data-cat');
         if(activeCategories.has(cat)) {
             activeCategories.delete(cat);
-            btn.classList.remove('active'); // You can add CSS for .active button if needed
+            btn.classList.remove('active');
             btn.classList.replace('btn-light', 'btn-outline-light');
         } else {
             activeCategories.add(cat);
@@ -123,7 +135,6 @@ document.querySelectorAll('#categoryChips button').forEach(btn => {
     });
 });
 
-// Auto POI Toggle
 const autoLandmarksToggle = document.getElementById('autoLandmarks');
 if(autoLandmarksToggle){
     let debounce=null;
@@ -142,18 +153,48 @@ if(autoLandmarksToggle){
     }
 }
 
-// --- 4. MARKERS & ROUTING ---
+// --- 4. MARKERS & ROUTING (FIXED DRAGGING) ---
 map.on('click', e => {
     if (isNavigating) return;
     if (!startMarker) setMarker('start', e.latlng);
     else if (!endMarker) setMarker('end', e.latlng);
 });
 
+// FIX: This function now creates DRAGGABLE markers
 function setMarker(type, latlng, text) {
-    const color = type === 'start' ? '#3b82f6' : '#ef4444';
-    const marker = L.circleMarker(latlng, { radius: 8, color: 'white', weight: 2, fillColor: color, fillOpacity: 1 });
+    const isStart = type === 'start';
+    const color = isStart ? '#3b82f6' : '#ef4444'; // Blue or Red
+
+    // Create a Custom Icon that looks like a dot but behaves like a marker
+    const customIcon = L.divIcon({
+        className: 'custom-marker-icon',
+        html: `<div style="
+            background-color: ${color};
+            width: 24px;
+            height: 24px;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            cursor: grab;
+        "></div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+    });
+
+    const marker = L.marker(latlng, { 
+        icon: customIcon, 
+        draggable: true // ENABLE DRAGGING
+    });
     
-    if (type === 'start') {
+    // Handle Drag Events
+    marker.on('dragend', function(e) {
+        const newPos = marker.getLatLng();
+        const coordString = `${newPos.lat.toFixed(4)}, ${newPos.lng.toFixed(4)}`;
+        if (isStart) els.start.value = coordString;
+        else els.end.value = coordString;
+    });
+
+    if (isStart) {
         if (startMarker) map.removeLayer(startMarker);
         startMarker = marker.addTo(map);
         els.start.value = text || `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`;
@@ -164,7 +205,6 @@ function setMarker(type, latlng, text) {
     }
 }
 
-// Geolocation (My Loc)
 document.getElementById('locateBtn').addEventListener('click', () => {
     navigator.geolocation.getCurrentPosition(pos => {
         const lat = pos.coords.latitude, lng = pos.coords.longitude;
@@ -189,18 +229,15 @@ document.getElementById('routeBtn').addEventListener('click', async () => {
         routeLayer = L.polyline(coords, { color: '#3b82f6', weight: 6, opacity: 0.8 }).addTo(map);
         map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
 
-        // Stats & History
         const kms = (routeData.distance/1000).toFixed(1);
         const mins = Math.round(routeData.duration/60);
         document.getElementById('routeStats').innerHTML = `<i class="bi bi-info-circle"></i> ${kms} km • ${mins} min`;
         
-        // Save History (Restored)
         fetch('/history', { 
             method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
             body: `startLat=${s.lat}&startLng=${s.lng}&endLat=${e.lat}&endLng=${e.lng}&profile=${mode}`
         }).catch(()=>{});
 
-        // Parse Steps
         routeSteps = [];
         routeData.legs.forEach(leg => {
             leg.steps.forEach(step => {
@@ -212,7 +249,6 @@ document.getElementById('routeBtn').addEventListener('click', async () => {
             });
         });
 
-        // Mobile UX: Collapse panel
         if(window.innerWidth < 768) {
              els.mainPanel.classList.add('collapsed');
              if(els.mobileToggle) els.mobileToggle.querySelector('i').classList.replace('bi-chevron-down', 'bi-chevron-up');
@@ -270,7 +306,6 @@ function updateNavigation(pos) {
         els.navDist.innerText = "0m";
     }
     
-    // ETA
     const speed = Math.max(pos.coords.speed || 10, 1);
     const distToEnd = userLoc.distanceTo(endMarker.getLatLng());
     els.navRem.innerText = (distToEnd/1000).toFixed(1) + " km";
@@ -284,7 +319,6 @@ function speak(text) {
     window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
 }
 
-// Mobile Toggle
 if(els.mobileToggle) {
     els.mobileToggle.addEventListener('click', () => {
         els.mainPanel.classList.toggle('collapsed');

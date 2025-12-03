@@ -76,18 +76,27 @@ public class MapController {
     }
 
     // -----------------------------
-    // Location Search using OpenStreetMap Nominatim
+    // IMPROVED: Search using OpenStreetMap Nominatim
     // -----------------------------
     @GetMapping("/search")
     @ResponseBody
-    public ResponseEntity<String> search(@RequestParam String q) {
+    public ResponseEntity<String> search(@RequestParam String q, @RequestParam(required = false) String viewbox) {
         try {
-            URI uri = UriComponentsBuilder.fromUriString("https://nominatim.openstreetmap.org/search")
+            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString("https://nominatim.openstreetmap.org/search")
                     .queryParam("format", "json")
                     .queryParam("q", q)
                     .queryParam("limit", 8)
-                    .build()
-                    .toUri();
+                    .queryParam("countrycodes", "ph")      // FIX: Restrict to Philippines
+                    .queryParam("addressdetails", "1")     // FIX: Get better address details
+                    .queryParam("dedupe", "1");            // FIX: Remove duplicates
+
+            // FIX: Bias results to the user's current map view (if provided)
+            if (viewbox != null && !viewbox.isEmpty()) {
+                builder.queryParam("viewbox", viewbox);
+                builder.queryParam("bounded", "0"); // 0 = Prefer viewbox, but allow outside. 1 = Strict.
+            }
+
+            URI uri = builder.build().toUri();
 
             HttpHeaders headers = new HttpHeaders();
             headers.set("User-Agent", "MapAppProSpring/1.0");
@@ -129,7 +138,6 @@ public class MapController {
             String[] selected;
             if (cats != null && !cats.isEmpty()) {
                 String[] requested = cats.split(",");
-                // Map simple categories to Overpass key=value
                 selected = new String[requested.length];
                 for (int i = 0; i < requested.length; i++) {
                     String c = requested[i].trim().toLowerCase();
@@ -178,7 +186,7 @@ public class MapController {
     }
 
     // -----------------------------
-    // Route Finder (Walking, Driving, Cycling)
+    // Route Finder
     // -----------------------------
     @GetMapping("/route")
     @ResponseBody
