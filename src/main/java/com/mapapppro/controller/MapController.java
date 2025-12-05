@@ -25,9 +25,7 @@ public class MapController {
     private final RestTemplate rest = new RestTemplate();
 
     @GetMapping({"/", "/index"})
-    public String index() {
-        return "index";
-    }
+    public String index() { return "index"; }
 
     @GetMapping("/login")
     public String loginPage() { return "login"; }
@@ -69,6 +67,7 @@ public class MapController {
         return ResponseEntity.ok(history==null? new ArrayList<>(): history);
     }
 
+    // --- SEARCH (Nominatim) ---
     @GetMapping("/search")
     @ResponseBody
     public ResponseEntity<String> search(@RequestParam String q, @RequestParam(required = false) String viewbox) {
@@ -76,7 +75,7 @@ public class MapController {
             UriComponentsBuilder builder = UriComponentsBuilder.fromUriString("https://nominatim.openstreetmap.org/search")
                     .queryParam("format", "json")
                     .queryParam("q", q)
-                    .queryParam("limit", 8)
+                    .queryParam("limit", 5)
                     .queryParam("countrycodes", "ph")
                     .queryParam("addressdetails", "1")
                     .queryParam("dedupe", "1");
@@ -87,127 +86,102 @@ public class MapController {
             }
 
             URI uri = builder.build().toUri();
-
             HttpHeaders headers = new HttpHeaders();
             headers.set("User-Agent", "MapAppProSpring/1.0");
-
             HttpEntity<?> entity = new HttpEntity<>(headers);
             ResponseEntity<String> response = rest.exchange(uri, HttpMethod.GET, entity, String.class);
-
             return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("[]");
         }
     }
 
-    @GetMapping("/landmarks")
+    // --- REVERSE GEOCODING (New!) ---
+    @GetMapping("/reverse")
     @ResponseBody
-    public ResponseEntity<String> landmarks(
-            @RequestParam double lat,
-            @RequestParam double lon,
-            @RequestParam(required = false, defaultValue = "2000") int radius,
-            @RequestParam(required = false) String cats
-    ) {
+    public ResponseEntity<String> reverse(@RequestParam double lat, @RequestParam double lon) {
         try {
-            String[] defaults = new String[]{
-                    "tourism=museum", "amenity=hospital", "shop=mall",
-                    "amenity=school", "leisure=park", "amenity=restaurant",
-                    "amenity=cafe", "amenity=atm", "amenity=pharmacy", "tourism=hotel"
-            };
-
-            String[] selected;
-            if (cats != null && !cats.isEmpty()) {
-                String[] requested = cats.split(",");
-                selected = new String[requested.length];
-                for (int i = 0; i < requested.length; i++) {
-                    String c = requested[i].trim().toLowerCase();
-                    switch (c) {
-                        case "cafe": selected[i] = "amenity=cafe"; break;
-                        case "restaurant": selected[i] = "amenity=restaurant"; break;
-                        case "park": selected[i] = "leisure=park"; break;
-                        case "atm": selected[i] = "amenity=atm"; break;
-                        case "pharmacy": selected[i] = "amenity=pharmacy"; break;
-                        case "hotel": selected[i] = "tourism=hotel"; break;
-                        case "hospital": selected[i] = "amenity=hospital"; break;
-                        case "school": selected[i] = "amenity=school"; break;
-                        case "museum": selected[i] = "tourism=museum"; break;
-                        default: selected[i] = "amenity=" + c; break;
-                    }
-                }
-            } else {
-                selected = defaults;
-            }
-
-            StringBuilder sb = new StringBuilder("[out:json][timeout:25];(");
-            for (String kv : selected) {
-                String[] p = kv.split("=");
-                if (p.length != 2) continue;
-                sb.append("node[\"").append(p[0]).append("\"=\"").append(p[1]).append("\"](around:")
-                        .append(radius).append(",").append(lat).append(",").append(lon).append(");");
-            }
-            sb.append(");out body;");
-            String query = sb.toString();
-
-            URI uri = UriComponentsBuilder.fromUriString("https://overpass-api.de/api/interpreter")
-                    .queryParam("data", query)
-                    .build()
-                    .toUri();
+            URI uri = UriComponentsBuilder.fromUriString("https://nominatim.openstreetmap.org/reverse")
+                    .queryParam("format", "json")
+                    .queryParam("lat", lat)
+                    .queryParam("lon", lon)
+                    .queryParam("zoom", 18)
+                    .queryParam("addressdetails", "1")
+                    .build().toUri();
 
             HttpHeaders headers = new HttpHeaders();
             headers.set("User-Agent", "MapAppProSpring/1.0");
-
             HttpEntity<?> entity = new HttpEntity<>(headers);
             ResponseEntity<String> response = rest.exchange(uri, HttpMethod.GET, entity, String.class);
-
-            return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("[]");
-        }
-    }
-
-    @GetMapping("/route")
-    @ResponseBody
-    public ResponseEntity<String> route(
-            @RequestParam double startLat,
-            @RequestParam double startLng,
-            @RequestParam double endLat,
-            @RequestParam double endLng,
-            @RequestParam(defaultValue = "driving") String profile,
-            @RequestParam(required = false, defaultValue = "false") boolean steps) {
-
-        try {
-            // FIX: THIS IS THE IMPORTANT PART
-            // We translate the UI names (walking/cycling) to OSRM API names (foot/bike)
-            String osrmProfile = "driving";
-            if (profile.equalsIgnoreCase("walking")) {
-                osrmProfile = "foot";
-            } else if (profile.equalsIgnoreCase("cycling")) {
-                osrmProfile = "bike";
-            } else {
-                osrmProfile = "driving";
-            }
-
-            String coords = String.format("%f,%f;%f,%f", startLng, startLat, endLng, endLat);
-            
-            // Use the translated 'osrmProfile' in the URL
-            String base = String.format("http://router.project-osrm.org/route/v1/%s/%s", osrmProfile, coords);
-
-            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(base)
-                    .queryParam("overview", "full")
-                    .queryParam("geometries", "polyline")
-                    .queryParam("steps", String.valueOf(steps));
-
-            URI uri = builder.build().toUri();
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("User-Agent", "MapAppProSpring/1.0");
-
-            HttpEntity<?> entity = new HttpEntity<>(headers);
-            ResponseEntity<String> response = rest.exchange(uri, HttpMethod.GET, entity, String.class);
-
             return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("{}");
         }
+    }
+
+    // --- LANDMARKS ---
+    @GetMapping("/landmarks")
+    @ResponseBody
+    public ResponseEntity<String> landmarks(
+            @RequestParam double lat, @RequestParam double lon,
+            @RequestParam(required = false, defaultValue = "2000") int radius,
+            @RequestParam(required = false) String cats
+    ) {
+        try {
+            String[] defaults = new String[]{ "tourism=museum", "amenity=hospital", "shop=mall", "amenity=restaurant" };
+            String[] selected = (cats != null && !cats.isEmpty()) ? 
+                java.util.Arrays.stream(cats.split(",")).map(c -> mapCategory(c.trim())).toArray(String[]::new) : defaults;
+
+            StringBuilder sb = new StringBuilder("[out:json][timeout:25];(");
+            for (String kv : selected) {
+                String[] p = kv.split("=");
+                if (p.length == 2) sb.append("node[\"").append(p[0]).append("\"=\"").append(p[1]).append("\"](around:")
+                        .append(radius).append(",").append(lat).append(",").append(lon).append(");");
+            }
+            sb.append(");out body;");
+
+            URI uri = UriComponentsBuilder.fromUriString("https://overpass-api.de/api/interpreter")
+                    .queryParam("data", sb.toString()).build().toUri();
+            return rest.exchange(uri, HttpMethod.GET, new HttpEntity<>(new HttpHeaders()), String.class);
+        } catch (Exception e) { return ResponseEntity.badRequest().body("[]"); }
+    }
+
+    private String mapCategory(String c) {
+        switch (c.toLowerCase()) {
+            case "cafe": return "amenity=cafe";
+            case "restaurant": return "amenity=restaurant";
+            case "park": return "leisure=park";
+            case "atm": return "amenity=atm";
+            case "pharmacy": return "amenity=pharmacy";
+            case "hotel": return "tourism=hotel";
+            case "hospital": return "amenity=hospital";
+            default: return "amenity=" + c;
+        }
+    }
+
+    // --- ROUTING ---
+    @GetMapping("/route")
+    @ResponseBody
+    public ResponseEntity<String> route(
+            @RequestParam double startLat, @RequestParam double startLng,
+            @RequestParam double endLat, @RequestParam double endLng,
+            @RequestParam(defaultValue = "driving") String profile,
+            @RequestParam(required = false, defaultValue = "false") boolean steps) {
+        try {
+            String osrmProfile = "driving";
+            if (profile.equalsIgnoreCase("walking")) osrmProfile = "foot";
+            else if (profile.equalsIgnoreCase("cycling")) osrmProfile = "bike";
+
+            String coords = String.format("%f,%f;%f,%f", startLng, startLat, endLng, endLat);
+            String base = String.format("http://router.project-osrm.org/route/v1/%s/%s", osrmProfile, coords);
+
+            URI uri = UriComponentsBuilder.fromUriString(base)
+                    .queryParam("overview", "full")
+                    .queryParam("geometries", "polyline")
+                    .queryParam("steps", String.valueOf(steps))
+                    .build().toUri();
+
+            return rest.exchange(uri, HttpMethod.GET, new HttpEntity<>(new HttpHeaders()), String.class);
+        } catch (Exception e) { return ResponseEntity.badRequest().body("{}"); }
     }
 }

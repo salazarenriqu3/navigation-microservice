@@ -1,97 +1,82 @@
 :root {
-    --bg: #0f172a;
-    --panel-bg: rgba(15, 23, 42, 0.90);
-    --panel-border: rgba(255, 255, 255, 0.1);
+    --bg-dark: #0f172a;
+    --panel-bg: rgba(15, 23, 42, 0.95);
     --primary: #3b82f6;
-    --accent: #10b981;
-    --text: #f8fafc;
-    --safe-area-bottom: env(safe-area-inset-bottom, 20px);
+    --success: #10b981;
+    --danger: #ef4444;
+    --text-main: #f8fafc;
+    --border: rgba(255, 255, 255, 0.08);
 }
 
-body { margin: 0; padding: 0; overflow: hidden; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); }
+body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-dark); color: var(--text-main); overflow: hidden; }
 #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
 
 /* Header */
-.app-header {
-    position: absolute; top: 0; left: 0; width: 100%; z-index: 1001;
-    background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
-    padding: 15px; pointer-events: none;
-}
+.app-header { position: absolute; top: 0; left: 0; width: 100%; z-index: 1001; padding: 15px; pointer-events: none; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); }
 .app-header .content { pointer-events: auto; display: flex; justify-content: space-between; align-items: center; }
+.icon-box { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
 
-/* Main Panel */
-.controls-container {
-    position: absolute; top: 80px; left: 20px; width: 360px; z-index: 1000;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.panel {
+/* Glass Panel */
+.glass-panel {
     background: var(--panel-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--panel-border); border-radius: 16px; padding: 20px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4); color: var(--text);
-    max-height: calc(100vh - 120px); overflow-y: auto;
-    scrollbar-width: none; /* Hide scrollbar */
+    border: 1px solid var(--border); box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    border-radius: 16px;
 }
-.panel::-webkit-scrollbar { display: none; }
 
-/* Form Elements */
-.form-control, .form-select {
-    background: rgba(0,0,0,0.3) !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-    color: white !important;
-}
-.form-control:focus { box-shadow: 0 0 0 2px var(--primary); border-color: var(--primary) !important; }
-.input-group-text { border-color: rgba(255,255,255,0.1) !important; }
+/* Controls */
+.controls-container { position: absolute; top: 80px; left: 20px; width: 360px; z-index: 1000; transition: transform 0.3s ease; }
+.panel { padding: 20px; }
 
-/* Autocomplete Results */
-.autocomplete-list {
-    position: absolute; width: 100%; z-index: 2000;
-    background: #1e293b; border: 1px solid var(--panel-border);
-    border-radius: 0 0 10px 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    max-height: 200px; overflow-y: auto;
-}
-.autocomplete-item { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; font-size: 0.9rem; }
+/* Search Stack */
+.search-stack { background: rgba(0,0,0,0.2); border-radius: 12px; padding: 10px; border: 1px solid var(--border); }
+.search-box { display: flex; align-items: center; gap: 10px; padding: 5px; }
+.form-control { background: transparent; border: none; color: white; box-shadow: none; font-size: 0.95rem; }
+.form-control:focus { background: transparent; color: white; box-shadow: none; }
+.form-control::placeholder { color: rgba(255,255,255,0.4); }
+.connector-line { width: 2px; height: 15px; background: rgba(255,255,255,0.1); margin-left: 10px; }
+
+/* Mode Selectors */
+.mode-selector { display: flex; gap: 5px; }
+.btn-mode { border: 1px solid var(--border); color: #94a3b8; border-radius: 8px; flex: 1; text-align: center; }
+.btn-check:checked + .btn-mode { background: rgba(59, 130, 246, 0.2); color: var(--primary); border-color: var(--primary); }
+
+/* Buttons & Chips */
+.btn-glass { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: white; border-radius: 8px; }
+.btn-glass:hover { background: rgba(255,255,255,0.1); }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.chip { background: transparent; border: 1px solid var(--border); color: #cbd5e1; border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; transition: 0.2s; }
+.chip:hover, .chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+.autocomplete-list { background: #1e293b; border-radius: 8px; margin-top: 5px; overflow: hidden; border: 1px solid var(--border); }
+.autocomplete-item { padding: 10px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; }
 .autocomplete-item:hover { background: rgba(255,255,255,0.1); }
 
-/* POI Icons */
-.poi-icon {
-    background: #0f172a; color: white; border: 2px solid var(--accent);
-    border-radius: 8px; padding: 2px 6px; font-size: 11px; font-weight: bold;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.5); white-space: nowrap;
+/* NAV OVERLAY */
+.nav-overlay { position: absolute; inset: 0; z-index: 2000; pointer-events: none; }
+.nav-top-card { 
+    pointer-events: auto; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); 
+    width: 90%; max-width: 400px; background: #1e293b; color: white; border-radius: 12px; 
+    display: flex; gap: 15px; padding: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 2px solid var(--primary);
 }
-.poi-hospital { border-color: #ef4444; }
-.poi-park { border-color: #22c55e; }
-.poi-restaurant { border-color: #f59e0b; }
+.nav-icon-box { font-size: 2rem; color: var(--primary); display: flex; align-items: center; }
+.nav-dist { font-size: 1.8rem; font-weight: 800; line-height: 1; }
+.nav-instruction { font-size: 1.1rem; font-weight: 500; opacity: 0.9; }
 
-/* Mobile Bottom Sheet */
+.nav-bottom-bar { 
+    pointer-events: auto; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); 
+    width: 90%; max-width: 600px; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center;
+}
+.label { font-size: 0.7rem; color: #64748b; letter-spacing: 1px; font-weight: 700; }
+.value { font-size: 1.2rem; font-weight: 700; }
+
+.instructions-list {
+    pointer-events: auto; position: absolute; bottom: 100px; right: 20px; width: 250px; 
+    max-height: 300px; overflow-y: auto; z-index: 2005;
+}
+.step-item { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; gap: 10px; }
+.step-item.active { background: rgba(59, 130, 246, 0.2); border-left: 3px solid var(--primary); }
+
 @media (max-width: 768px) {
-    .controls-container {
-        top: auto; bottom: 0; left: 0; width: 100%; z-index: 2000; transform: translateY(0);
-    }
-    .panel {
-        border-radius: 24px 24px 0 0; border-bottom: none;
-        padding-bottom: calc(20px + var(--safe-area-bottom));
-        max-height: 80vh;
-    }
-    .controls-container.collapsed { transform: translateY(calc(100% - 60px)); }
+    .controls-container { top: auto; bottom: 0; left: 0; width: 100%; border-radius: 20px 20px 0 0; }
+    .nav-bottom-bar { bottom: 0; width: 100%; max-width: 100%; border-radius: 20px 20px 0 0; }
+    .instructions-list { right: 10px; bottom: 120px; width: calc(100% - 20px); }
 }
-
-/* Navigation Mode */
-body.navigating .app-header, body.navigating .controls-container { display: none !important; }
-
-#navTopBar {
-    display: none; position: absolute; top: 20px; left: 5%; width: 90%; z-index: 3000;
-    background: #1e293b; border-radius: 12px; padding: 15px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 2px solid var(--primary);
-    align-items: center; gap: 15px;
-}
-body.navigating #navTopBar { display: flex; }
-.nav-distance { font-size: 2rem; font-weight: 800; color: var(--primary); white-space: nowrap; }
-.nav-instruction { font-size: 1.1rem; font-weight: 700; color: white; line-height: 1.2; }
-
-#navBottomBar {
-    display: none; position: absolute; bottom: 0; left: 0; width: 100%; z-index: 3000;
-    background: #1e293b; padding: 20px 20px calc(20px + var(--safe-area-bottom)) 20px;
-    border-top: 1px solid rgba(255,255,255,0.1); justify-content: space-between; align-items: center;
-}
-body.navigating #navBottomBar { display: flex; }
-.nav-meta { font-size: 0.8rem; color: #94a3b8; line-height: 1.2; }

@@ -18,13 +18,13 @@
 
 <div class="app-header">
   <div class="content container-fluid">
-    <div class="fw-bold fs-5 text-white d-flex align-items-center gap-2">
-      <i class="bi bi-geo-alt-fill text-primary"></i> 
-      <span>MapApp<span class="text-primary">Pro</span></span>
+    <div class="brand d-flex align-items-center gap-2">
+      <div class="icon-box bg-primary text-white"><i class="bi bi-compass-fill"></i></div>
+      <span class="fw-bold text-white tracking-tight">MapApp<span class="text-primary">Pro</span></span>
     </div>
     <div th:if="${session.user}">
        <form method="post" th:action="@{/logout}">
-         <button class="btn btn-sm btn-outline-light rounded-pill px-3">Logout</button>
+         <button class="btn btn-sm btn-glass text-white"><i class="bi bi-box-arrow-right"></i></button>
        </form>
     </div>
     <div th:if="${session.user} == null">
@@ -34,91 +34,105 @@
 </div>
 
 <div class="controls-container" id="mainPanel">
-  <div class="panel">
+  <div class="panel glass-panel">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="m-0 fw-bold text-white"><i class="bi bi-layers me-2"></i>Trip Planner</h6>
-        <button class="btn btn-sm btn-outline-light d-md-none border-0" id="mobileToggle">
+        <h6 class="m-0 fw-bold text-white"><i class="bi bi-sliders me-2 text-primary"></i>Plan Your Trip</h6>
+        <button class="btn btn-sm btn-icon text-white-50 d-md-none" id="mobileToggle">
           <i class="bi bi-chevron-down"></i>
         </button>
     </div>
 
-    <div class="mb-3 position-relative">
-        <div class="input-group mb-2">
-            <span class="input-group-text bg-transparent border-secondary text-primary"><i class="bi bi-circle-fill small"></i></span>
-            <input id="start" class="form-control" placeholder="Start (Search or click map)">
+    <div class="search-stack mb-3">
+        <div class="search-box">
+            <i class="bi bi-circle-fill text-primary start-dot"></i>
+            <input id="start" class="form-control" placeholder="Choose starting point...">
         </div>
         <div id="start-list" class="autocomplete-list" style="display:none"></div>
         
-        <div class="input-group">
-            <span class="input-group-text bg-transparent border-secondary text-danger"><i class="bi bi-geo-alt-fill"></i></span>
-            <input id="end" class="form-control" placeholder="Destination (Search or click map)">
+        <div class="connector-line"></div>
+        
+        <div class="search-box">
+            <i class="bi bi-geo-alt-fill text-danger end-dot"></i>
+            <input id="end" class="form-control" placeholder="Choose destination...">
         </div>
         <div id="end-list" class="autocomplete-list" style="display:none"></div>
     </div>
 
-    <div class="d-flex gap-2 mb-3">
-        <select id="profile" class="form-select bg-dark text-white border-secondary" style="width:auto">
-            <option value="driving">🚗 Drive</option>
-            <option value="walking">🚶 Walk</option>
-            <option value="cycling">🚴 Cycle</option>
-        </select>
-        <button id="routeBtn" class="btn btn-primary flex-grow-1 fw-bold">Get Route</button>
+    <div class="mode-selector mb-3">
+        <input type="radio" class="btn-check" name="profile" id="mode-car" value="driving" checked>
+        <label class="btn btn-mode" for="mode-car"><i class="bi bi-car-front-fill"></i></label>
+
+        <input type="radio" class="btn-check" name="profile" id="mode-bike" value="cycling">
+        <label class="btn btn-mode" for="mode-bike"><i class="bi bi-bicycle"></i></label>
+
+        <input type="radio" class="btn-check" name="profile" id="mode-walk" value="walking">
+        <label class="btn btn-mode" for="mode-walk"><i class="bi bi-person-walking"></i></label>
+        
+        <button id="routeBtn" class="btn btn-primary flex-grow-1 ms-2 fw-bold shadow-sm">
+            <i class="bi bi-sign-turn-right-fill me-1"></i> Route
+        </button>
     </div>
     
-    <div id="routeStats" class="mb-3 text-accent fw-bold small"></div>
+    <div id="routeStats" class="mb-3 text-white fw-bold small d-flex align-items-center gap-2"></div>
 
-    <button id="startNavBtn" class="btn btn-success w-100 py-2 fw-bold shadow mb-3 text-uppercase">
+    <button id="startNavBtn" class="btn btn-success w-100 py-2 fw-bold shadow-lg text-uppercase tracking-wider mb-3">
         <i class="bi bi-cursor-fill me-2"></i> Start Navigation
     </button>
 
-    <hr class="border-secondary opacity-25">
-    
-    <div class="row g-2 mb-3">
-        <div class="col-6">
-             <button id="locateBtn" class="btn btn-outline-light w-100 small"><i class="bi bi-crosshair me-1"></i> My Loc</button>
-        </div>
-        <div class="col-6">
-             <button id="landmarkBtn" class="btn btn-outline-light w-100 small"><i class="bi bi-shop me-1"></i> Nearby</button>
-        </div>
-    </div>
-
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <div class="form-check form-switch text-white-50 small">
-        <input class="form-check-input" type="checkbox" id="voiceToggle">
-        <label class="form-check-label" for="voiceToggle">Voice</label>
-      </div>
-      <div class="form-check form-switch text-white-50 small">
-        <input class="form-check-input" type="checkbox" id="autoLandmarks">
-        <label class="form-check-label" for="autoLandmarks">Auto POI</label>
-      </div>
+    <div class="grid-2 mb-3">
+        <button id="locateBtn" class="btn btn-glass w-100 small"><i class="bi bi-crosshair"></i> My Location</button>
+        <button id="landmarkBtn" class="btn btn-glass w-100 small"><i class="bi bi-shop"></i> Explore</button>
     </div>
 
     <div class="d-flex flex-wrap gap-2" id="categoryChips">
-      <button class="btn btn-outline-light btn-sm rounded-pill" data-cat="cafe">☕ Cafe</button>
-      <button class="btn btn-outline-light btn-sm rounded-pill" data-cat="restaurant">🍔 Food</button>
-      <button class="btn btn-outline-light btn-sm rounded-pill" data-cat="park">🌳 Park</button>
-      <button class="btn btn-outline-light btn-sm rounded-pill" data-cat="atm">🏧 ATM</button>
-      <button class="btn btn-outline-light btn-sm rounded-pill" data-cat="hotel">🏨 Hotel</button>
-      <button class="btn btn-outline-light btn-sm rounded-pill" data-cat="hospital">🏥 Hospital</button>
+      <button class="chip" data-cat="cafe"><i class="bi bi-cup-hot"></i> Cafe</button>
+      <button class="chip" data-cat="restaurant"><i class="bi bi-shop"></i> Food</button>
+      <button class="chip" data-cat="park"><i class="bi bi-tree"></i> Park</button>
+      <button class="chip" data-cat="gas"><i class="bi bi-fuel-pump"></i> Gas</button>
     </div>
-
+    
+    <div class="d-flex justify-content-between mt-3 px-1">
+       <div class="form-check form-switch small text-white-50">
+           <input class="form-check-input" type="checkbox" id="voiceToggle">
+           <label class="form-check-label" for="voiceToggle">Voice</label>
+       </div>
+    </div>
   </div>
 </div>
 
-<div id="navTopBar">
-    <div class="nav-distance" id="navDist">0m</div>
-    <div class="text-start flex-grow-1" style="overflow:hidden;">
-        <div class="nav-instruction text-truncate" id="navText">Ready</div>
-        <div class="small text-muted text-truncate" id="navNextText">Then...</div>
+<div id="navOverlay" class="nav-overlay" style="display:none">
+    <div class="nav-top-card">
+        <div class="nav-icon-box" id="turnIcon"><i class="bi bi-arrow-up"></i></div>
+        <div class="nav-text-box">
+            <div class="nav-dist" id="navDist">0m</div>
+            <div class="nav-instruction" id="navText">Starting...</div>
+        </div>
     </div>
-</div>
+    
+    <div id="instructionsPanel" class="instructions-list glass-panel" style="display:none">
+        <div class="d-flex justify-content-between p-2 border-bottom border-secondary">
+             <span class="fw-bold text-white">Next Steps</span>
+             <button class="btn btn-sm text-white" onclick="document.getElementById('instructionsPanel').style.display='none'"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <ul id="stepList" class="list-unstyled m-0 p-2 text-white-50 small"></ul>
+    </div>
 
-<div id="navBottomBar">
-    <div class="d-flex gap-4">
-        <div class="nav-meta">ETA<br><span id="navETA" class="text-white fw-bold">--:--</span></div>
-        <div class="nav-meta">Dist<br><span id="navRem" class="text-white fw-bold">0 km</span></div>
+    <div class="nav-bottom-bar glass-panel">
+        <div class="d-flex gap-4 align-items-center">
+            <div>
+                <div class="label">ETA</div>
+                <div class="value text-success" id="navETA">--:--</div>
+            </div>
+            <div>
+                <div class="label">REMAINING</div>
+                <div class="value text-white" id="navRem">-- km</div>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+             <button class="btn btn-glass btn-icon" id="toggleListBtn"><i class="bi bi-list-ul"></i></button>
+             <button id="stopNavBtn" class="btn btn-danger px-4 fw-bold rounded-pill">EXIT</button>
+        </div>
     </div>
-    <button id="stopNavBtn" class="btn btn-danger fw-bold px-4 rounded-pill">EXIT</button>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
