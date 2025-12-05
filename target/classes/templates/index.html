@@ -58,18 +58,24 @@
         <div id="end-list" class="autocomplete-list" style="display:none"></div>
     </div>
 
-    <div class="mode-selector mb-3">
-        <input type="radio" class="btn-check" name="profile" id="mode-car" value="driving" checked>
-        <label class="btn btn-mode" for="mode-car"><i class="bi bi-car-front-fill"></i></label>
+    <div class="mode-selector mb-3 d-flex align-items-center">
+        <div class="btn-group flex-grow-1" role="group">
+            <input type="radio" class="btn-check" name="profile" id="mode-car" value="driving" checked>
+            <label class="btn btn-mode" for="mode-car"><i class="bi bi-car-front-fill"></i></label>
 
-        <input type="radio" class="btn-check" name="profile" id="mode-bike" value="cycling">
-        <label class="btn btn-mode" for="mode-bike"><i class="bi bi-bicycle"></i></label>
+            <input type="radio" class="btn-check" name="profile" id="mode-bike" value="cycling">
+            <label class="btn btn-mode" for="mode-bike"><i class="bi bi-bicycle"></i></label>
 
-        <input type="radio" class="btn-check" name="profile" id="mode-walk" value="walking">
-        <label class="btn btn-mode" for="mode-walk"><i class="bi bi-person-walking"></i></label>
+            <input type="radio" class="btn-check" name="profile" id="mode-walk" value="walking">
+            <label class="btn btn-mode" for="mode-walk"><i class="bi bi-person-walking"></i></label>
+        </div>
         
-        <button id="routeBtn" class="btn btn-primary flex-grow-1 ms-2 fw-bold shadow-sm">
-            <i class="bi bi-sign-turn-right-fill me-1"></i> Route
+        <button id="clearBtn" class="btn btn-glass ms-2 text-white-50" title="Clear Map" style="border-radius: 8px;">
+            <i class="bi bi-trash3-fill"></i>
+        </button>
+
+        <button id="routeBtn" class="btn btn-primary ms-2 fw-bold shadow-sm" style="min-width: 80px;">
+            Route
         </button>
     </div>
     

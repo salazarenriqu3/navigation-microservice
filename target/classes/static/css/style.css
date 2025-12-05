@@ -50,6 +50,9 @@ body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-dark); 
 .autocomplete-item { padding: 10px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; }
 .autocomplete-item:hover { background: rgba(255,255,255,0.1); }
 
+/* POI Icons */
+.poi-icon { white-space: nowrap; }
+
 /* NAV OVERLAY */
 .nav-overlay { position: absolute; inset: 0; z-index: 2000; pointer-events: none; }
 .nav-top-card { 

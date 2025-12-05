@@ -16,6 +16,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import jakarta.servlet.http.HttpSession;
 
@@ -47,13 +48,14 @@ public class MapController {
                                         @RequestParam String profile,
                                         HttpSession session){
         Object user = session.getAttribute("user");
-        if(user==null){ return ResponseEntity.status(401).body("Not logged in"); }
         List<Map<String,Object>> history = (List<Map<String,Object>>) session.getAttribute("history");
         if(history==null){ history = new ArrayList<>(); session.setAttribute("history", history); }
+        
         Map<String,Object> entry = new HashMap<>();
-        entry.put("startLat", startLat); entry.put("startLng", startLng);
-        entry.put("endLat", endLat); entry.put("endLng", endLng);
-        entry.put("profile", profile); entry.put("ts", System.currentTimeMillis());
+        entry.put("startLat", startLat); 
+        entry.put("endLat", endLat);
+        entry.put("profile", profile); 
+        entry.put("ts", System.currentTimeMillis());
         history.add(entry);
         return ResponseEntity.ok(entry);
     }
@@ -61,13 +63,10 @@ public class MapController {
     @GetMapping("/history")
     @ResponseBody
     public ResponseEntity<?> getHistory(HttpSession session){
-        Object user = session.getAttribute("user");
-        if(user==null){ return ResponseEntity.status(401).body("Not logged in"); }
         List<Map<String,Object>> history = (List<Map<String,Object>>) session.getAttribute("history");
         return ResponseEntity.ok(history==null? new ArrayList<>(): history);
     }
 
-    // --- SEARCH (Nominatim) ---
     @GetMapping("/search")
     @ResponseBody
     public ResponseEntity<String> search(@RequestParam String q, @RequestParam(required = false) String viewbox) {
@@ -76,27 +75,19 @@ public class MapController {
                     .queryParam("format", "json")
                     .queryParam("q", q)
                     .queryParam("limit", 5)
-                    .queryParam("countrycodes", "ph")
-                    .queryParam("addressdetails", "1")
-                    .queryParam("dedupe", "1");
-
+                    .queryParam("countrycodes", "ph");
+            
             if (viewbox != null && !viewbox.isEmpty()) {
-                builder.queryParam("viewbox", viewbox);
-                builder.queryParam("bounded", "0");
+                builder.queryParam("viewbox", viewbox).queryParam("bounded", "0");
             }
-
+            
             URI uri = builder.build().toUri();
             HttpHeaders headers = new HttpHeaders();
             headers.set("User-Agent", "MapAppProSpring/1.0");
-            HttpEntity<?> entity = new HttpEntity<>(headers);
-            ResponseEntity<String> response = rest.exchange(uri, HttpMethod.GET, entity, String.class);
-            return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("[]");
-        }
+            return rest.exchange(uri, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+        } catch (Exception e) { return ResponseEntity.badRequest().body("[]"); }
     }
 
-    // --- REVERSE GEOCODING (New!) ---
     @GetMapping("/reverse")
     @ResponseBody
     public ResponseEntity<String> reverse(@RequestParam double lat, @RequestParam double lon) {
@@ -106,60 +97,75 @@ public class MapController {
                     .queryParam("lat", lat)
                     .queryParam("lon", lon)
                     .queryParam("zoom", 18)
-                    .queryParam("addressdetails", "1")
                     .build().toUri();
-
+            
             HttpHeaders headers = new HttpHeaders();
             headers.set("User-Agent", "MapAppProSpring/1.0");
-            HttpEntity<?> entity = new HttpEntity<>(headers);
-            ResponseEntity<String> response = rest.exchange(uri, HttpMethod.GET, entity, String.class);
-            return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("{}");
-        }
+            return rest.exchange(uri, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+        } catch (Exception e) { return ResponseEntity.badRequest().body("{}"); }
     }
 
-    // --- LANDMARKS ---
     @GetMapping("/landmarks")
     @ResponseBody
-    public ResponseEntity<String> landmarks(
-            @RequestParam double lat, @RequestParam double lon,
-            @RequestParam(required = false, defaultValue = "2000") int radius,
-            @RequestParam(required = false) String cats
-    ) {
+    public ResponseEntity<String> landmarks(@RequestParam double lat, @RequestParam double lon, @RequestParam(defaultValue = "1500") int radius, @RequestParam(required = false) String cats) {
         try {
-            String[] defaults = new String[]{ "tourism=museum", "amenity=hospital", "shop=mall", "amenity=restaurant" };
-            String[] selected = (cats != null && !cats.isEmpty()) ? 
-                java.util.Arrays.stream(cats.split(",")).map(c -> mapCategory(c.trim())).toArray(String[]::new) : defaults;
-
-            StringBuilder sb = new StringBuilder("[out:json][timeout:25];(");
-            for (String kv : selected) {
-                String[] p = kv.split("=");
-                if (p.length == 2) sb.append("node[\"").append(p[0]).append("\"=\"").append(p[1]).append("\"](around:")
-                        .append(radius).append(",").append(lat).append(",").append(lon).append(");");
+            // FIX: Define a STRICT list of allowed categories. 
+            // If the user doesn't select anything, we only show these defaults.
+            String filter = "";
+            
+            if (cats != null && !cats.isEmpty()) {
+                String[] requested = cats.split(",");
+                StringBuilder unions = new StringBuilder();
+                for (String c : requested) {
+                    unions.append(mapCategoryToOverpass(c.trim(), radius, lat, lon));
+                }
+                filter = unions.toString();
+            } else {
+                // Default: ONLY show major amenities (Food, ATM, Sights)
+                filter = String.format(Locale.US, 
+                    "(nwr[\"amenity\"=\"cafe\"](around:%d,%f,%f);" +
+                    "nwr[\"amenity\"=\"restaurant\"](around:%d,%f,%f);" +
+                    "nwr[\"amenity\"=\"fast_food\"](around:%d,%f,%f);" +
+                    "nwr[\"amenity\"=\"bank\"](around:%d,%f,%f);" +
+                    "nwr[\"amenity\"=\"atm\"](around:%d,%f,%f);" +
+                    "nwr[\"leisure\"=\"park\"](around:%d,%f,%f);" +
+                    "nwr[\"tourism\"=\"hotel\"](around:%d,%f,%f);)", 
+                    radius, lat, lon, radius, lat, lon, radius, lat, lon,
+                    radius, lat, lon, radius, lat, lon, radius, lat, lon, radius, lat, lon);
             }
-            sb.append(");out body;");
 
+            // Construct final query [out:json][timeout:25];( ... );out center;
+            String query = String.format("[out:json][timeout:25];%sout center;", filter);
+            
             URI uri = UriComponentsBuilder.fromUriString("https://overpass-api.de/api/interpreter")
-                    .queryParam("data", sb.toString()).build().toUri();
-            return rest.exchange(uri, HttpMethod.GET, new HttpEntity<>(new HttpHeaders()), String.class);
-        } catch (Exception e) { return ResponseEntity.badRequest().body("[]"); }
-    }
+                    .queryParam("data", query)
+                    .build()
+                    .toUri();
 
-    private String mapCategory(String c) {
-        switch (c.toLowerCase()) {
-            case "cafe": return "amenity=cafe";
-            case "restaurant": return "amenity=restaurant";
-            case "park": return "leisure=park";
-            case "atm": return "amenity=atm";
-            case "pharmacy": return "amenity=pharmacy";
-            case "hotel": return "tourism=hotel";
-            case "hospital": return "amenity=hospital";
-            default: return "amenity=" + c;
+            return rest.exchange(uri, HttpMethod.GET, new HttpEntity<>(new HttpHeaders()), String.class);
+        } catch (Exception e) { 
+            return ResponseEntity.ok("[]"); 
         }
     }
 
-    // --- ROUTING ---
+    // Helper to map UI names to Overpass tags
+    private String mapCategoryToOverpass(String category, int r, double lat, double lon) {
+        String tag = "";
+        switch (category.toLowerCase()) {
+            case "cafe": tag = "\"amenity\"=\"cafe\""; break;
+            case "food": 
+            case "restaurant": tag = "\"amenity\"~\"restaurant|fast_food\""; break;
+            case "park": tag = "\"leisure\"=\"park\""; break;
+            case "bank": 
+            case "atm": tag = "\"amenity\"~\"bank|atm\""; break;
+            case "hotel": tag = "\"tourism\"=\"hotel\""; break;
+            case "hospital": tag = "\"amenity\"~\"hospital|clinic\""; break;
+            case "gas": tag = "\"amenity\"=\"fuel\""; break;
+            default: return ""; 
+        }
+        return String.format(Locale.US, "nwr[%s](around:%d,%f,%f);", tag, r, lat, lon);
+    }
+
     @GetMapping("/route")
     @ResponseBody
     public ResponseEntity<String> route(
@@ -167,21 +173,32 @@ public class MapController {
             @RequestParam double endLat, @RequestParam double endLng,
             @RequestParam(defaultValue = "driving") String profile,
             @RequestParam(required = false, defaultValue = "false") boolean steps) {
+
+        System.out.println("ROUTE REQUEST: " + profile);
+
+        String baseUrl = "http://router.project-osrm.org/route/v1/driving/"; // Default Car
+        
+        if (profile.toLowerCase().contains("walk") || profile.toLowerCase().contains("foot")) {
+            baseUrl = "http://routing.openstreetmap.de/routed-foot/route/v1/driving/"; // Foot Server
+        } else if (profile.toLowerCase().contains("cycl") || profile.toLowerCase().contains("bike")) {
+            baseUrl = "http://routing.openstreetmap.de/routed-bike/route/v1/driving/"; // Bike Server
+        }
+
+        // FIX: Force US Locale to avoid "121,000" format in some regions
+        String coords = String.format(Locale.US, "%f,%f;%f,%f", startLng, startLat, endLng, endLat);
+        String finalUrl = baseUrl + coords;
+
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(finalUrl)
+                .queryParam("overview", "full")
+                .queryParam("geometries", "polyline")
+                .queryParam("steps", String.valueOf(steps));
+
         try {
-            String osrmProfile = "driving";
-            if (profile.equalsIgnoreCase("walking")) osrmProfile = "foot";
-            else if (profile.equalsIgnoreCase("cycling")) osrmProfile = "bike";
-
-            String coords = String.format("%f,%f;%f,%f", startLng, startLat, endLng, endLat);
-            String base = String.format("http://router.project-osrm.org/route/v1/%s/%s", osrmProfile, coords);
-
-            URI uri = UriComponentsBuilder.fromUriString(base)
-                    .queryParam("overview", "full")
-                    .queryParam("geometries", "polyline")
-                    .queryParam("steps", String.valueOf(steps))
-                    .build().toUri();
-
-            return rest.exchange(uri, HttpMethod.GET, new HttpEntity<>(new HttpHeaders()), String.class);
-        } catch (Exception e) { return ResponseEntity.badRequest().body("{}"); }
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", "MapAppProSpring/1.0");
+            return rest.exchange(builder.build().toUri(), HttpMethod.GET, new HttpEntity<>(headers), String.class);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("{}");
+        }
     }
 }
