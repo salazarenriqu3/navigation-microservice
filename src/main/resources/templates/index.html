@@ -3,14 +3,11 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>MapAppPro Ultimate - Traffic Aware</title>
+  <title>OpenTrack Bus System</title>
   
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-rotatedmarker@0.2.0/leaflet.rotatedMarker.css"/>
   <link rel="stylesheet" href="/css/style.css" th:href="@{/css/style.css}"/>
 </head>
 <body>
@@ -20,201 +17,68 @@
 <div class="app-header">
   <div class="content container-fluid">
     <div class="brand d-flex align-items-center gap-2">
-      <div class="icon-box bg-primary text-white"><i class="bi bi-compass-fill"></i></div>
-      <span class="fw-bold text-white tracking-tight">MapApp<span class="text-primary">Pro</span></span>
+      <div class="icon-box bg-warning text-dark"><i class="bi bi-bus-front-fill"></i></div>
+      <span class="fw-bold text-white">Open<span class="text-warning">Track</span></span>
     </div>
-    <div th:if="${session.user}">
-       <form method="post" th:action="@{/logout}">
-         <button class="btn btn-sm btn-glass text-white"><i class="bi bi-box-arrow-right"></i></button>
-       </form>
-    </div>
-    <div th:if="${session.user} == null">
-        <a href="/login" class="btn btn-sm btn-primary rounded-pill px-3">Login</a>
-    </div>
+    <form method="post" th:action="@{/logout}">
+       <button class="btn btn-sm btn-glass text-white"><i class="bi bi-power"></i> Logout</button>
+    </form>
   </div>
 </div>
 
-<div class="controls-container" id="mainPanel">
+<div class="controls-container" id="driverControls" style="display:none;">
   <div class="panel glass-panel">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="m-0 fw-bold text-white"><i class="bi bi-sliders me-2 text-primary"></i>Plan Your Trip</h6>
-        <button class="btn btn-sm btn-icon text-white-50 d-md-none" id="mobileToggle">
-          <i class="bi bi-chevron-down"></i>
-        </button>
-    </div>
-
-    <!-- WEATHER WIDGET -->
-    <div id="weatherWidget" class="weather-widget"></div>
-
-    <div class="search-stack mb-3">
-        <div class="search-box">
-            <i class="bi bi-circle-fill text-primary start-dot"></i>
-            <input id="start" class="form-control" placeholder="Choose starting point...">
-        </div>
-        <div id="start-list" class="autocomplete-list" style="display:none"></div>
-        
-        <div class="connector-line"></div>
-        
-        <div class="search-box">
-            <i class="bi bi-geo-alt-fill text-danger end-dot"></i>
-            <input id="end" class="form-control" placeholder="Choose destination...">
-        </div>
-        <div id="end-list" class="autocomplete-list" style="display:none"></div>
-    </div>
-
-    <div class="mode-selector mb-3 d-flex align-items-center">
-        <div class="btn-group flex-grow-1" role="group">
-            <input type="radio" class="btn-check" name="profile" id="mode-car" value="driving" checked>
-            <label class="btn btn-mode" for="mode-car" title="Driving"><i class="bi bi-car-front-fill"></i></label>
-
-            <input type="radio" class="btn-check" name="profile" id="mode-bike" value="cycling">
-            <label class="btn btn-mode" for="mode-bike" title="Cycling"><i class="bi bi-bicycle"></i></label>
-
-            <input type="radio" class="btn-check" name="profile" id="mode-walk" value="walking">
-            <label class="btn btn-mode" for="mode-walk" title="Walking"><i class="bi bi-person-walking"></i></label>
-        </div>
-        
-        <button id="clearBtn" class="btn btn-glass ms-2 text-white-50" title="Clear Map" style="border-radius: 8px;">
-            <i class="bi bi-trash3-fill"></i>
-        </button>
-
-        <button id="routeBtn" class="btn btn-primary ms-2 fw-bold shadow-sm" style="min-width: 80px;">
-            Route
-        </button>
-    </div>
     
-    <!-- ROUTE STATS WITH TRAFFIC -->
-    <div id="routeStats" class="mb-3 text-white fw-bold small d-flex align-items-center gap-2 flex-wrap"></div>
+    <div class="mb-3">
+        <label class="text-white-50 small fw-bold text-uppercase">Assigned Route</label>
+        <select id="routeSelect" class="form-select bg-dark text-white border-secondary mt-1">
+            <option value="" disabled selected>-- Select Route --</option>
+            <option value="PITX-LAWTON">Route A: PITX <-> Lawton</option>
+            <option value="CUBAO-MAKATI">Route B: Cubao <-> Makati</option>
+        </select>
+    </div>
 
-    <button id="startNavBtn" class="btn btn-success w-100 py-2 fw-bold shadow-lg text-uppercase tracking-wider mb-3">
-        <i class="bi bi-cursor-fill me-2"></i> Start Navigation
+    <button id="startNavBtn" class="btn btn-secondary w-100 py-3 fw-bold shadow-lg text-uppercase tracking-wider mb-3" disabled>
+        <i class="bi bi-cursor-fill me-2"></i> Select Route First
     </button>
 
-    <div class="grid-2 mb-3">
-        <button id="locateBtn" class="btn btn-glass w-100 small"><i class="bi bi-crosshair"></i> My Location</button>
-        <button id="landmarkBtn" class="btn btn-glass w-100 small"><i class="bi bi-shop"></i> Explore</button>
-    </div>
-
-    <!-- CATEGORY CHIPS -->
-    <div class="d-flex flex-wrap gap-2" id="categoryChips">
-      <button class="chip" data-cat="cafe"><i class="bi bi-cup-hot"></i> Cafe</button>
-      <button class="chip" data-cat="restaurant"><i class="bi bi-shop"></i> Food</button>
-      <button class="chip" data-cat="park"><i class="bi bi-tree"></i> Park</button>
-      <button class="chip" data-cat="gas"><i class="bi bi-fuel-pump"></i> Gas</button>
-      <button class="chip" data-cat="hospital"><i class="bi bi-hospital"></i> Hospital</button>
-      <button class="chip" data-cat="police"><i class="bi bi-shield-fill-check"></i> Police</button>
-      <button class="chip" data-cat="fire"><i class="bi bi-fire"></i> Fire Station</button>
-      <button class="chip" data-cat="school"><i class="bi bi-mortarboard-fill"></i> School</button>
-      <button class="chip" data-cat="government"><i class="bi bi-building"></i> Government</button>
-    </div>
-    
-    <div class="d-flex justify-content-between mt-3 px-1">
-       <div class="form-check form-switch small text-white-50">
-           <input class="form-check-input" type="checkbox" id="voiceToggle">
-           <label class="form-check-label" for="voiceToggle">Voice Guidance</label>
-       </div>
+    <div class="grid-2 mb-2">
+        <button class="btn btn-glass w-100 py-2" onclick="findNearby('gas')">
+            <i class="bi bi-fuel-pump text-warning fs-4 d-block mb-1"></i>
+            <span class="small">Gas Stations</span>
+        </button>
+        <button class="btn btn-glass w-100 py-2" onclick="findNearby('repair')">
+            <i class="bi bi-wrench-adjustable text-danger fs-4 d-block mb-1"></i>
+            <span class="small">Vulcanizing</span>
+        </button>
     </div>
   </div>
 </div>
 
-<!-- TRAFFIC LEGEND -->
-<div id="trafficLegend" class="traffic-legend">
-    <div style="font-weight: 700; margin-bottom: 8px; color: white; font-size: 0.75rem;">TRAFFIC CONDITIONS</div>
-    <div class="traffic-legend-item">
-        <div class="traffic-legend-color" style="background: #3b82f6;"></div>
-        <span style="color: rgba(255,255,255,0.8);">Free Flow</span>
-    </div>
-    <div class="traffic-legend-item">
-        <div class="traffic-legend-color" style="background: #f59e0b;"></div>
-        <span style="color: rgba(255,255,255,0.8);">Moderate Traffic</span>
-    </div>
-    <div class="traffic-legend-item">
-        <div class="traffic-legend-color" style="background: #ef4444;"></div>
-        <span style="color: rgba(255,255,255,0.8);">Heavy Traffic</span>
-    </div>
-</div>
-
-<!-- NAVIGATION OVERLAY (Google Maps Style) -->
-<div id="navOverlay" class="nav-overlay" style="display:none">
-    <!-- Weather in Navigation -->
-    <div id="navWeather" class="nav-weather"></div>
-
-    <!-- Top Turn Card -->
-    <div class="nav-top-card">
-        <div class="nav-top-content">
-            <div class="nav-icon-box" id="turnIcon">
-                <i class="bi bi-arrow-up"></i>
-            </div>
-            <div class="nav-text-box">
-                <div class="nav-dist" id="navDist">0m</div>
-                <div class="nav-instruction" id="navText">Starting navigation...</div>
-                <div class="nav-road-name" id="navRoadName" style="display:none;">
-                    <i class="bi bi-sign-turn-right"></i>
-                    <span>Road Name</span>
-                </div>
-            </div>
-        </div>
+<div id="dispatcherPanel" class="glass-panel" style="display:none; position:absolute; top:80px; right:20px; width:320px; z-index:1000; padding:15px; max-height:80vh; overflow-y:auto;">
+    <h6 class="text-white fw-bold mb-3"><i class="bi bi-broadcast me-2 text-success"></i>Live Fleet</h6>
+    <div id="fleetList" class="text-white-50 small">
+        <div class="text-center py-3">Waiting for signals...</div>
     </div>
     
-    <!-- Re-center Button -->
-    <div class="recenter-btn" id="recenterBtn">
-        <i class="bi bi-crosshair"></i>
-    </div>
-
-    <!-- Instructions List -->
-    <div id="instructionsPanel" class="instructions-list glass-panel" style="display:none">
-        <div class="d-flex justify-content-between p-2 border-bottom border-secondary">
-             <span class="fw-bold text-white small">Next Steps</span>
-             <button class="btn btn-sm text-white p-0" onclick="document.getElementById('instructionsPanel').style.display='none'">
-                <i class="bi bi-x-lg"></i>
-             </button>
-        </div>
-        <ul id="stepList" class="list-unstyled m-0 p-2 text-white-50 small"></ul>
-    </div>
-
-    <!-- Bottom Stats Bar -->
-    <div class="nav-bottom-bar glass-panel">
-        <div class="nav-stats">
-            <div class="nav-stat-item">
-                <div class="label">ETA</div>
-                <div class="value text-success" id="navETA">--:--</div>
-            </div>
-            <div class="nav-stat-item">
-                <div class="label">Remaining</div>
-                <div class="value text-white" id="navRem">-- km</div>
-            </div>
-        </div>
-        <div class="nav-actions">
-             <button class="btn btn-glass btn-icon" id="toggleListBtn" title="Show steps">
-                <i class="bi bi-list-ul"></i>
-             </button>
-             <button id="stopNavBtn" class="btn btn-danger px-4 fw-bold rounded-pill">
-                Exit
-             </button>
+    <div class="mt-3 pt-3 border-top border-secondary">
+        <label class="text-white-50 small mb-1">Send Message to Driver</label>
+        <input id="adminMsgInput" class="form-control form-control-sm bg-dark text-white mb-2" placeholder="e.g., Return to base">
+        <div class="input-group">
+            <input id="adminDriverId" class="form-control form-control-sm bg-dark text-white" placeholder="Driver ID">
+            <button class="btn btn-sm btn-primary" onclick="sendAdminMessage()">Send</button>
         </div>
     </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/@mapbox/polyline@1.1.1/src/polyline.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-<script src="https://unpkg.com/leaflet-rotatedmarker@0.2.0/leaflet.rotatedMarker.js"></script>
-<script src="/js/map.js" th:src="@{/js/map.js}"></script>
-
-<script>
-// Show traffic legend when route is displayed
-document.getElementById('routeBtn').addEventListener('click', () => {
-    setTimeout(() => {
-        const legend = document.getElementById('trafficLegend');
-        if (legend) legend.classList.add('active');
-    }, 500);
-});
-
-// Hide traffic legend when clearing
-document.getElementById('clearBtn').addEventListener('click', () => {
-    const legend = document.getElementById('trafficLegend');
-    if (legend) legend.classList.remove('active');
-});
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const CURRENT_USER_ROLE = /*[[${session.user.role}]]*/ 'GUEST';
+    const CURRENT_USER_ID = /*[[${session.user.id}]]*/ 0;
+    /*]]>*/
 </script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/js/map.js"></script>
 </body>
 </html>

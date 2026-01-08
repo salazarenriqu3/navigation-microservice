@@ -11,19 +11,41 @@
   <div class="container">
     <div class="row justify-content-center">
       <div class="col-md-4">
-        <div class="panel shadow-soft">
-          <h5 class="mb-3">Mock Login</h5>
+        <div class="panel shadow-soft glass-panel p-4">
+          <div class="text-center mb-4">
+             <h4 class="fw-bold text-white">Open<span class="text-primary">Track</span></h4>
+             <p class="text-white-50 small">Fleet Management System</p>
+          </div>
+          
           <form method="post" th:action="@{/login}">
             <div class="mb-3">
-              <label class="form-label">Username</label>
-              <input class="form-control" name="username" placeholder="Enter any name" required>
+              <label class="form-label text-white">Username</label>
+              <input class="form-control" name="username" placeholder="e.g. Admin or Driver1" required>
             </div>
-            <button class="btn btn-primary w-100" type="submit">Login</button>
+
+            <div class="mb-3">
+              <label class="form-label text-white">Password</label>
+              <input type="password" class="form-control" name="password" placeholder="Enter password" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label text-white">I am a...</label>
+              <select class="form-select" name="role">
+                <option value="DISPATCHER">Dispatcher / Admin</option>
+                <option value="DRIVER">Bus Driver</option>
+              </select>
+            </div>
+
+            <button class="btn btn-primary w-100 fw-bold" type="submit">Login</button>
+            
+            <div th:if="${param.error}" class="alert alert-danger mt-3 small py-2">
+                Invalid username or password.
+            </div>
           </form>
+          
         </div>
       </div>
     </div>
   </div>
 </body>
 </html>
-
