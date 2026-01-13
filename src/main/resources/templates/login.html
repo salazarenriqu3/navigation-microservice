@@ -20,7 +20,7 @@
           <form method="post" th:action="@{/login}">
             <div class="mb-3">
               <label class="form-label text-white">Username</label>
-              <input class="form-control" name="username" placeholder="e.g. Admin or Driver1" required>
+              <input class="form-control" name="username" placeholder="Enter username" required>
             </div>
 
             <div class="mb-3">
@@ -28,18 +28,16 @@
               <input type="password" class="form-control" name="password" placeholder="Enter password" required>
             </div>
 
-            <div class="mb-3">
-              <label class="form-label text-white">I am a...</label>
-              <select class="form-select" name="role">
-                <option value="DISPATCHER">Dispatcher / Admin</option>
-                <option value="DRIVER">Bus Driver</option>
-              </select>
-            </div>
-
             <button class="btn btn-primary w-100 fw-bold" type="submit">Login</button>
             
-            <div th:if="${param.error}" class="alert alert-danger mt-3 small py-2">
-                Invalid username or password.
+            <div th:if="${param.error == 'bad_creds'}" class="alert alert-danger mt-3 small py-2">
+                Invalid password.
+            </div>
+            <div th:if="${param.error == 'user_not_found'}" class="alert alert-danger mt-3 small py-2">
+                User not found. Contact admin to create account.
+            </div>
+            <div th:if="${param.error == 'account_disabled'}" class="alert alert-danger mt-3 small py-2">
+                Your account has been disabled.
             </div>
           </form>
           
