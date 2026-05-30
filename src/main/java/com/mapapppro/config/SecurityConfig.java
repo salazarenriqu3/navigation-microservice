@@ -22,10 +22,11 @@ public class SecurityConfig {
                 // Public endpoints
                 .requestMatchers("/login", "/debug/**").permitAll()
                 .requestMatchers("/static/**", "/css/**", "/js/**", "/img/**", "/images/**").permitAll()
-                
+
                 // Require authentication for everything else
                 .anyRequest().authenticated()
             )
+            .httpBasic(basic -> {})
             .formLogin(form -> form
                 .loginPage("/login")
                 .loginProcessingUrl("/login")
