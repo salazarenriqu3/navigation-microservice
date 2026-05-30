@@ -208,6 +208,7 @@ async function fetchFleet() {
       info.innerHTML = `
         <div><i class="bi bi-bus-front"></i> ${bus.fullName || "Driver #" + bus.driverId}</div>
         <small class="text-white-50">${bus.plateNo || "No plate"}</small>
+        <small class="text-white-50 d-block"><i class="bi bi-geo-alt"></i> ${bus.latitude.toFixed(5)}, ${bus.longitude.toFixed(5)}</small>
       `;
 
       const actions = document.createElement("div");
